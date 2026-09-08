@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🫧 Cyanobacteria Brasil - Mapa Interativo</title>
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.Default.min.css"/>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; }
+        
+        .container-main { display: grid; grid-template-columns: 1fr 360px; height: 100vh; }
+        #map { grid-column: 1; background: #e8f4f8; }
+        
+        .sidebar { 
+            grid-column: 2; 
+            background: white; 
+            border-left: 1px solid #e2e8f0;
+            overflow-y: auto;
+            box-shadow: -4px 0 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .header h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+        .header p { font-size: 12px; opacity: 0.9; }
+        
+        .section { padding: 16px; border-bottom: 1px solid #f1f5f9; }
+        .section h3 { font-size: 12px; font-weight: 600; color: #333; margin-bottom: 12px; text-transform: uppercase; }
+        
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+        .stat-label { color: #64748b; }
+        .stat-value { font-weight: 600; color: #1e293b; }
+        
+        .color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+        
+        .filter-item { display: flex; align-items: center; margin-bottom: 10px; }
+        .filter-item input { margin-right: 8px; }
+        .filter-item label { font-size: 13px; cursor: pointer; flex: 1; }
+        
+        .input-search { 
+            width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0;
+            border-radius: 6px; font-size: 12px;
+        }
+        
+        .input-search:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        
+        .info-box { font-size: 11px; line-height: 1.6; color: #64748b; }
+        
+        @media (max-width: 1024px) {
+            .container-main { grid-template-columns: 1fr; }
+            .sidebar { grid-column: 1; max-height: 30vh; border-left: none; border-top: 1px solid #e2e8f0; }
+            #map { grid-column: 1; }
+        }
+    </style>
+</head>
+<body>
+<div class="container-main">
+    <div id="map"></div>
+    
+    <div class="sidebar">
+        <div class="header">
+            <h1>🫧 Cyanobacteria Brasil</h1>
+            <p>Distribuição Geográfica Interativa</p>
+        </div>
+        
+        <div class="section">
+            <input type="text" id="search" class="input-search" placeholder="🔍 Buscar município...">
+        </div>
+        
+        <div class="section">
+            <h3>📊 Estatísticas</h3>
+            <div class="stat-row">
+                <span class="stat-label">Total de Bolhas:</span>
+                <span class="stat-value">192</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Municípios:</span>
+                <span class="stat-value">103</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><span class="color-dot" style="background:#0066CC;"></span>Heterocytous:</span>
+                <span class="stat-value">89</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><span class="color-dot" style="background:#FF6B35;"></span>Coccoid:</span>
+                <span class="stat-value">45</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><span class="color-dot" style="background:#00A86B;"></span>Non-het:</span>
+                <span class="stat-value">58</span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>🎨 Filtros</h3>
+            <div class="filter-item">
+                <input type="checkbox" id="filter-het" checked>
+                <label for="filter-het">Heterocytous</label>
+            </div>
+            <div class="filter-item">
+                <input type="checkbox" id="filter-coc" checked>
+                <label for="filter-coc">Coccoid</label>
+            </div>
+            <div class="filter-item">
+                <input type="checkbox" id="filter-non" checked>
+                <label for="filter-non">Non-heterocytous</label>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>ℹ️ Como Usar</h3>
+            <div class="info-box">
+                ✓ Scroll = zoom<br>
+                ✓ Arrastar = pan<br>
+                ✓ Clique = popup<br>
+                ✓ Filtros dinâmicos<br>
+                ✓ Busca de município
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/leaflet.markercluster.min.js"></script>
+
+<script>
+const dados = [{"municipio": "Macei\u00f3", "estado": "Alagoas", "tipo": "Heterocytous", "freq": 1, "lat": -9.6658, "lon": -35.7353, "color": "#0066CC"}, {"municipio": "Iranduba", "estado": "Amazonas", "tipo": "Heterocytous", "freq": 2, "lat": -2.8847, "lon": -60.3833, "color": "#0066CC"}, {"municipio": "Salvador", "estado": "Bahia", "tipo": "Coccoid", "freq": 3, "lat": -12.9714, "lon": -38.5014, "color": "#FF6B35"}, {"municipio": "Salvador", "estado": "Bahia", "tipo": "Heterocytous", "freq": 2, "lat": -12.9714, "lon": -38.5014, "color": "#0066CC"}, {"municipio": "Vit\u00f3ria da Conquista", "estado": "Bahia", "tipo": "Heterocytous", "freq": 1, "lat": -14.8619, "lon": -40.8397, "color": "#0066CC"}, {"municipio": "Vit\u00f3ria da Conquista", "estado": "Bahia", "tipo": "Non-heterocytous", "freq": 2, "lat": -14.8619, "lon": -40.8397, "color": "#00A86B"}, {"municipio": "Fortaleza", "estado": "Cear\u00e1", "tipo": "Heterocytous", "freq": 2, "lat": -3.7313, "lon": -38.5267, "color": "#0066CC"}, {"municipio": "Fortaleza", "estado": "Cear\u00e1", "tipo": "Non-heterocytous", "freq": 3, "lat": -3.7313, "lon": -38.5267, "color": "#00A86B"}, {"municipio": "Distrito Federal", "estado": "Distrito Federal", "tipo": "Coccoid", "freq": 3, "lat": -15.7939, "lon": -47.8822, "color": "#FF6B35"}, {"municipio": "Distrito Federal", "estado": "Distrito Federal", "tipo": "Non-heterocytous", "freq": 19, "lat": -15.7939, "lon": -47.8822, "color": "#00A86B"}, {"municipio": "Nova Veneza", "estado": "Esp\u00edrito Santo", "tipo": "Coccoid", "freq": 3, "lat": -20.5667, "lon": -40.7833, "color": "#FF6B35"}, {"municipio": "Nova Veneza", "estado": "Esp\u00edrito Santo", "tipo": "Heterocytous", "freq": 2, "lat": -20.5667, "lon": -40.7833, "color": "#0066CC"}, {"municipio": "Nova Veneza", "estado": "Esp\u00edrito Santo", "tipo": "Non-heterocytous", "freq": 1, "lat": -20.5667, "lon": -40.7833, "color": "#00A86B"}, {"municipio": "Pancas", "estado": "Esp\u00edrito Santo", "tipo": "Coccoid", "freq": 4, "lat": -19.6833, "lon": -40.75, "color": "#FF6B35"}, {"municipio": "Pancas", "estado": "Esp\u00edrito Santo", "tipo": "Heterocytous", "freq": 7, "lat": -19.6833, "lon": -40.75, "color": "#0066CC"}, {"municipio": "Pancas", "estado": "Esp\u00edrito Santo", "tipo": "Non-heterocytous", "freq": 1, "lat": -19.6833, "lon": -40.75, "color": "#00A86B"}, {"municipio": "Santa Tereza", "estado": "Esp\u00edrito Santo", "tipo": "Coccoid", "freq": 4, "lat": -20.0833, "lon": -40.6, "color": "#FF6B35"}, {"municipio": "Santa Tereza", "estado": "Esp\u00edrito Santo", "tipo": "Heterocytous", "freq": 3, "lat": -20.0833, "lon": -40.6, "color": "#0066CC"}, {"municipio": "Santa Tereza", "estado": "Esp\u00edrito Santo", "tipo": "Non-heterocytous", "freq": 1, "lat": -20.0833, "lon": -40.6, "color": "#00A86B"}, {"municipio": "Brumadinho", "estado": "Minas Gerais", "tipo": "Coccoid", "freq": 1, "lat": -20.1667, "lon": -44.1833, "color": "#FF6B35"}, {"municipio": "Brumadinho", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 2, "lat": -20.1667, "lon": -44.1833, "color": "#0066CC"}, {"municipio": "Brumadinho", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 2, "lat": -20.1667, "lon": -44.1833, "color": "#00A86B"}, {"municipio": "Cabo verde", "estado": "Minas Gerais", "tipo": "Coccoid", "freq": 10, "lat": -20.3333, "lon": -46.5667, "color": "#FF6B35"}, {"municipio": "Cabo verde", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 9, "lat": -20.3333, "lon": -46.5667, "color": "#0066CC"}, {"municipio": "Cabo verde", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 4, "lat": -20.3333, "lon": -46.5667, "color": "#00A86B"}, {"municipio": "Cl\u00e1udio", "estado": "Minas Gerais", "tipo": "Coccoid", "freq": 2, "lat": -19.6667, "lon": -45.25, "color": "#FF6B35"}, {"municipio": "Cl\u00e1udio", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 3, "lat": -19.6667, "lon": -45.25, "color": "#0066CC"}, {"municipio": "Cl\u00e1udio", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 1, "lat": -19.6667, "lon": -45.25, "color": "#00A86B"}, {"municipio": "Delfin\u00f3polis", "estado": "Minas Gerais", "tipo": "Coccoid", "freq": 1, "lat": -20.75, "lon": -46.2167, "color": "#FF6B35"}, {"municipio": "Delfin\u00f3polis", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 4, "lat": -20.75, "lon": -46.2167, "color": "#0066CC"}, {"municipio": "Delfin\u00f3polis", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 6, "lat": -20.75, "lon": -46.2167, "color": "#00A86B"}, {"municipio": "Mariana", "estado": "Minas Gerais", "tipo": "Coccoid", "freq": 1, "lat": -20.3667, "lon": -43.4167, "color": "#FF6B35"}, {"municipio": "Mariana", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 2, "lat": -20.3667, "lon": -43.4167, "color": "#0066CC"}, {"municipio": "Mariana", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 3, "lat": -20.3667, "lon": -43.4167, "color": "#00A86B"}, {"municipio": "Parque Serra da Canastra", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 1, "lat": -20.35, "lon": -46.55, "color": "#00A86B"}, {"municipio": "Pedro Leopoldo", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 1, "lat": -19.65, "lon": -44.0333, "color": "#0066CC"}, {"municipio": "Pedro Leopoldo", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 3, "lat": -19.65, "lon": -44.0333, "color": "#00A86B"}, {"municipio": "Santana do Riacho", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 2, "lat": -19.3833, "lon": -43.6667, "color": "#0066CC"}, {"municipio": "Santana do Riacho", "estado": "Minas Gerais", "tipo": "Non-heterocytous", "freq": 5, "lat": -19.3833, "lon": -43.6667, "color": "#00A86B"}, {"municipio": "Serra dos Amores", "estado": "Minas Gerais", "tipo": "Coccoid", "freq": 4, "lat": -20.3667, "lon": -41.8333, "color": "#FF6B35"}, {"municipio": "Serra dos Amores", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 3, "lat": -20.3667, "lon": -41.8333, "color": "#0066CC"}, {"municipio": "Tim\u00f3teo", "estado": "Minas Gerais", "tipo": "Heterocytous", "freq": 2, "lat": -19.4333, "lon": -42.5833, "color": "#0066CC"}, {"municipio": "Barra de Santa Rosa", "estado": "Para\u00edba", "tipo": "Non-heterocytous", "freq": 2, "lat": -7.1833, "lon": -35.8667, "color": "#00A86B"}, {"municipio": "Cabaceiras", "estado": "Para\u00edba", "tipo": "Non-heterocytous", "freq": 3, "lat": -7.0667, "lon": -35.9333, "color": "#00A86B"}, {"municipio": "Pocinhos", "estado": "Para\u00edba", "tipo": "Heterocytous", "freq": 3, "lat": -7.2667, "lon": -35.7, "color": "#0066CC"}, {"municipio": "Pocinhos", "estado": "Para\u00edba", "tipo": "Non-heterocytous", "freq": 3, "lat": -7.2667, "lon": -35.7, "color": "#00A86B"}, {"municipio": "Bel\u00e9m", "estado": "Par\u00e1", "tipo": "Heterocytous", "freq": 2, "lat": -1.4554, "lon": -48.5039, "color": "#0066CC"}, {"municipio": "Bel\u00e9m", "estado": "Par\u00e1", "tipo": "Non-heterocytous", "freq": 4, "lat": -1.4554, "lon": -48.5039, "color": "#00A86B"}, {"municipio": "Olinda", "estado": "Pernambuco", "tipo": "Heterocytous", "freq": 1, "lat": -8.0045, "lon": -34.8565, "color": "#0066CC"}, {"municipio": "Parque nacional do Catibau", "estado": "Pernambuco", "tipo": "Coccoid", "freq": 3, "lat": -8.4444, "lon": -35.2972, "color": "#FF6B35"}, {"municipio": "Parque nacional do Catibau", "estado": "Pernambuco", "tipo": "Heterocytous", "freq": 10, "lat": -8.4444, "lon": -35.2972, "color": "#0066CC"}, {"municipio": "Parque nacional do Catibau", "estado": "Pernambuco", "tipo": "Non-heterocytous", "freq": 5, "lat": -8.4444, "lon": -35.2972, "color": "#00A86B"}, {"municipio": "Recife", "estado": "Pernambuco", "tipo": "Coccoid", "freq": 31, "lat": -8.0476, "lon": -34.877, "color": "#FF6B35"}, {"municipio": "Recife", "estado": "Pernambuco", "tipo": "Heterocytous", "freq": 17, "lat": -8.0476, "lon": -34.877, "color": "#0066CC"}, {"municipio": "Recife", "estado": "Pernambuco", "tipo": "Non-heterocytous", "freq": 10, "lat": -8.0476, "lon": -34.877, "color": "#00A86B"}, {"municipio": "S\u00e3o Louren\u00e7o da Mata", "estado": "Pernambuco", "tipo": "Coccoid", "freq": 26, "lat": -8.2417, "lon": -35.2883, "color": "#FF6B35"}, {"municipio": "S\u00e3o Louren\u00e7o da Mata", "estado": "Pernambuco", "tipo": "Heterocytous", "freq": 30, "lat": -8.2417, "lon": -35.2883, "color": "#0066CC"}, {"municipio": "S\u00e3o Louren\u00e7o da Mata", "estado": "Pernambuco", "tipo": "Non-heterocytous", "freq": 10, "lat": -8.2417, "lon": -35.2883, "color": "#00A86B"}, {"municipio": "Tamandar\u00e9", "estado": "Pernambuco", "tipo": "Heterocytous", "freq": 1, "lat": -8.7667, "lon": -35.3333, "color": "#0066CC"}, {"municipio": "Cachoeira do Sul", "estado": "Rio Grande do Sul", "tipo": "Non-heterocytous", "freq": 1, "lat": -30.0342, "lon": -51.9586, "color": "#00A86B"}, {"municipio": "Manuel Viana", "estado": "Rio Grande do Sul", "tipo": "Heterocytous", "freq": 3, "lat": -29.3836, "lon": -56.2225, "color": "#0066CC"}, {"municipio": "Manuel Viana", "estado": "Rio Grande do Sul", "tipo": "Non-heterocytous", "freq": 4, "lat": -29.3836, "lon": -56.2225, "color": "#00A86B"}, {"municipio": "Porto Alegre", "estado": "Rio Grande do Sul", "tipo": "Coccoid", "freq": 2, "lat": -30.0277, "lon": -51.2287, "color": "#FF6B35"}, {"municipio": "Porto Alegre", "estado": "Rio Grande do Sul", "tipo": "Heterocytous", "freq": 5, "lat": -30.0277, "lon": -51.2287, "color": "#0066CC"}, {"municipio": "Porto Alegre", "estado": "Rio Grande do Sul", "tipo": "Non-heterocytous", "freq": 8, "lat": -30.0277, "lon": -51.2287, "color": "#00A86B"}, {"municipio": "Santa Maria", "estado": "Rio Grande do Sul", "tipo": "Coccoid", "freq": 9, "lat": -29.6842, "lon": -53.8069, "color": "#FF6B35"}, {"municipio": "Santa Maria", "estado": "Rio Grande do Sul", "tipo": "Heterocytous", "freq": 8, "lat": -29.6842, "lon": -53.8069, "color": "#0066CC"}, {"municipio": "Santa Maria", "estado": "Rio Grande do Sul", "tipo": "Non-heterocytous", "freq": 14, "lat": -29.6842, "lon": -53.8069, "color": "#00A86B"}, {"municipio": "S\u00e3o Francisco de Assis", "estado": "Rio Grande do Sul", "tipo": "Coccoid", "freq": 2, "lat": -29.3614, "lon": -55.5881, "color": "#FF6B35"}, {"municipio": "S\u00e3o Francisco de Assis", "estado": "Rio Grande do Sul", "tipo": "Heterocytous", "freq": 3, "lat": -29.3614, "lon": -55.5881, "color": "#0066CC"}, {"municipio": "S\u00e3o Francisco de Assis", "estado": "Rio Grande do Sul", "tipo": "Non-heterocytous", "freq": 3, "lat": -29.3614, "lon": -55.5881, "color": "#00A86B"}, {"municipio": "S\u00e3o Jorge", "estado": "Rio Grande do Sul", "tipo": "Heterocytous", "freq": 1, "lat": -29.4297, "lon": -54.0989, "color": "#0066CC"}, {"municipio": "Triunfo", "estado": "Rio Grande do Sul", "tipo": "Heterocytous", "freq": 1, "lat": -29.9075, "lon": -51.7175, "color": "#0066CC"}, {"municipio": "Viam\u00e3o", "estado": "Rio Grande do Sul", "tipo": "Non-heterocytous", "freq": 1, "lat": -30.1756, "lon": -51.0154, "color": "#00A86B"}, {"municipio": "Atatiaia", "estado": "Rio de Janeiro", "tipo": "Heterocytous", "freq": 4, "lat": -22.6167, "lon": -44.6, "color": "#0066CC"}, {"municipio": "Parati", "estado": "Rio de Janeiro", "tipo": "Heterocytous", "freq": 1, "lat": -23.2167, "lon": -44.7167, "color": "#0066CC"}, {"municipio": "Parati Mirim", "estado": "Rio de Janeiro", "tipo": "Coccoid", "freq": 3, "lat": -23.2167, "lon": -44.7, "color": "#FF6B35"}, {"municipio": "Parati Mirim", "estado": "Rio de Janeiro", "tipo": "Heterocytous", "freq": 3, "lat": -23.2167, "lon": -44.7, "color": "#0066CC"}, {"municipio": "Paraty", "estado": "Rio de Janeiro", "tipo": "Non-heterocytous", "freq": 3, "lat": -23.2167, "lon": -44.7167, "color": "#00A86B"}, {"municipio": "Rio de Janeiro", "estado": "Rio de Janeiro", "tipo": "Coccoid", "freq": 1, "lat": -22.9068, "lon": -43.1729, "color": "#FF6B35"}, {"municipio": "Rio de Janeiro", "estado": "Rio de Janeiro", "tipo": "Non-heterocytous", "freq": 1, "lat": -22.9068, "lon": -43.1729, "color": "#00A86B"}, {"municipio": "Amparo", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.7, "lon": -46.8, "color": "#0066CC"}, {"municipio": "Andradina", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -20.8217, "lon": -51.3833, "color": "#0066CC"}, {"municipio": "Barretos", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 3, "lat": -21.5533, "lon": -48.5678, "color": "#FF6B35"}, {"municipio": "Barretos", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 7, "lat": -21.5533, "lon": -48.5678, "color": "#0066CC"}, {"municipio": "Barretos", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 5, "lat": -21.5533, "lon": -48.5678, "color": "#00A86B"}, {"municipio": "Bebedouros", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 2, "lat": -20.95, "lon": -48.4667, "color": "#FF6B35"}, {"municipio": "Bebedouros", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 6, "lat": -20.95, "lon": -48.4667, "color": "#0066CC"}, {"municipio": "Bebedouros", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -20.95, "lon": -48.4667, "color": "#00A86B"}, {"municipio": "Bertioga", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -23.85, "lon": -46.1667, "color": "#FF6B35"}, {"municipio": "Bertioga", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 5, "lat": -23.85, "lon": -46.1667, "color": "#0066CC"}, {"municipio": "Bragan\u00e7a Paulista", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.95, "lon": -46.5667, "color": "#0066CC"}, {"municipio": "Brotas", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.2167, "lon": -48.2, "color": "#0066CC"}, {"municipio": "Cajuru", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -21.2333, "lon": -48.9667, "color": "#00A86B"}, {"municipio": "Campos do Jord\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 2, "lat": -22.7333, "lon": -45.6, "color": "#FF6B35"}, {"municipio": "Campos do Jord\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 13, "lat": -22.7333, "lon": -45.6, "color": "#0066CC"}, {"municipio": "Campos do Jord\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 2, "lat": -22.7333, "lon": -45.6, "color": "#00A86B"}, {"municipio": "Cananeia", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 23, "lat": -25.0167, "lon": -48.0, "color": "#FF6B35"}, {"municipio": "Cananeia", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 10, "lat": -25.0167, "lon": -48.0, "color": "#0066CC"}, {"municipio": "Canan\u00e9ia", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 4, "lat": -25.0167, "lon": -48.0, "color": "#FF6B35"}, {"municipio": "Canan\u00e9ia", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 9, "lat": -25.0167, "lon": -48.0, "color": "#0066CC"}, {"municipio": "Canan\u00e9ia", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 2, "lat": -25.0167, "lon": -48.0, "color": "#00A86B"}, {"municipio": "Caraguatatuba", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 9, "lat": -23.6167, "lon": -45.4167, "color": "#0066CC"}, {"municipio": "Conchal", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.0, "lon": -47.1833, "color": "#0066CC"}, {"municipio": "Cunha", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -23.0667, "lon": -45.0, "color": "#0066CC"}, {"municipio": "Dois c\u00f3rregos", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.3833, "lon": -48.6333, "color": "#0066CC"}, {"municipio": "General Salgado", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -21.0333, "lon": -49.7667, "color": "#00A86B"}, {"municipio": "Ilha bela", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 2, "lat": -23.7667, "lon": -45.3667, "color": "#FF6B35"}, {"municipio": "Ilha bela", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 3, "lat": -23.7667, "lon": -45.3667, "color": "#0066CC"}, {"municipio": "Ilha bela", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -23.7667, "lon": -45.3667, "color": "#00A86B"}, {"municipio": "Ilha do Cardoso", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 4, "lat": -25.0667, "lon": -48.0667, "color": "#FF6B35"}, {"municipio": "Ilha do Cardoso", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 15, "lat": -25.0667, "lon": -48.0667, "color": "#0066CC"}, {"municipio": "Ilha do Cardoso", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 35, "lat": -25.0667, "lon": -48.0667, "color": "#00A86B"}, {"municipio": "Itanha\u00e9m", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 4, "lat": -24.1833, "lon": -46.7667, "color": "#FF6B35"}, {"municipio": "Itanha\u00e9m", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 10, "lat": -24.1833, "lon": -46.7667, "color": "#0066CC"}, {"municipio": "Itanha\u00e9m", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 12, "lat": -24.1833, "lon": -46.7667, "color": "#00A86B"}, {"municipio": "Jambeiro", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -23.2167, "lon": -45.8667, "color": "#0066CC"}, {"municipio": "Jur\u00e9ia", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -24.2167, "lon": -46.8333, "color": "#0066CC"}, {"municipio": "Jur\u00e9ria", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -24.2167, "lon": -46.8333, "color": "#0066CC"}, {"municipio": "Macaubal", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -21.5667, "lon": -49.9333, "color": "#FF6B35"}, {"municipio": "Macaubal", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 4, "lat": -21.5667, "lon": -49.9333, "color": "#0066CC"}, {"municipio": "Macaubal", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 3, "lat": -21.5667, "lon": -49.9333, "color": "#00A86B"}, {"municipio": "Mat\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 3, "lat": -21.6, "lon": -48.9667, "color": "#FF6B35"}, {"municipio": "Mat\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 4, "lat": -21.6, "lon": -48.9667, "color": "#0066CC"}, {"municipio": "Mat\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 3, "lat": -21.6, "lon": -48.9667, "color": "#00A86B"}, {"municipio": "Mogi Gua\u00e7u", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.3667, "lon": -47.1667, "color": "#0066CC"}, {"municipio": "Mogi Mirim", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.45, "lon": -47.0333, "color": "#0066CC"}, {"municipio": "Novo horizonte", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -21.8167, "lon": -49.1167, "color": "#0066CC"}, {"municipio": "Novo horizonte", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -21.8167, "lon": -49.1167, "color": "#00A86B"}, {"municipio": "N\u00facleo Santa Virginia", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -23.4833, "lon": -45.1833, "color": "#0066CC"}, {"municipio": "Onda Verde", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -21.2667, "lon": -49.6333, "color": "#0066CC"}, {"municipio": "Onda Verde", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -21.2667, "lon": -49.6333, "color": "#00A86B"}, {"municipio": "Onda verde", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -21.2667, "lon": -49.6333, "color": "#FF6B35"}, {"municipio": "Onda verde", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -21.2667, "lon": -49.6333, "color": "#0066CC"}, {"municipio": "Onda verde", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -21.2667, "lon": -49.6333, "color": "#00A86B"}, {"municipio": "Palestina", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -20.7833, "lon": -49.4167, "color": "#FF6B35"}, {"municipio": "Palestina", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 6, "lat": -20.7833, "lon": -49.4167, "color": "#0066CC"}, {"municipio": "Palestina", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 5, "lat": -20.7833, "lon": -49.4167, "color": "#00A86B"}, {"municipio": "Paraibuna", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -23.65, "lon": -45.6667, "color": "#0066CC"}, {"municipio": "Paranapiacaba", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 12, "lat": -23.7833, "lon": -46.3, "color": "#0066CC"}, {"municipio": "Pedregulho", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -20.25, "lon": -47.6667, "color": "#FF6B35"}, {"municipio": "Pedregulho", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -20.25, "lon": -47.6667, "color": "#0066CC"}, {"municipio": "Pedregulho", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 8, "lat": -20.25, "lon": -47.6667, "color": "#00A86B"}, {"municipio": "Peruibe", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 28, "lat": -24.3667, "lon": -46.9833, "color": "#FF6B35"}, {"municipio": "Peruibe", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 7, "lat": -24.3667, "lon": -46.9833, "color": "#0066CC"}, {"municipio": "Peru\u00edbe", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -24.3667, "lon": -46.9833, "color": "#00A86B"}, {"municipio": "Pindorama", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 3, "lat": -21.1833, "lon": -48.9167, "color": "#FF6B35"}, {"municipio": "Pindorama", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 6, "lat": -21.1833, "lon": -48.9167, "color": "#0066CC"}, {"municipio": "Pindorama", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 3, "lat": -21.1833, "lon": -48.9167, "color": "#00A86B"}, {"municipio": "Planalto", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -20.8667, "lon": -49.5667, "color": "#0066CC"}, {"municipio": "Restinga", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -23.75, "lon": -46.3333, "color": "#00A86B"}, {"municipio": "Rifaina", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -20.1667, "lon": -47.2667, "color": "#0066CC"}, {"municipio": "Sales", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -20.8167, "lon": -49.5, "color": "#FF6B35"}, {"municipio": "Sales", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 5, "lat": -20.8167, "lon": -49.5, "color": "#0066CC"}, {"municipio": "Sales", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 3, "lat": -20.8167, "lon": -49.5, "color": "#00A86B"}, {"municipio": "Santa Rita do Passa Quatro", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -21.7167, "lon": -47.5, "color": "#FF6B35"}, {"municipio": "Santa Rita do Passa Quatro", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -21.7167, "lon": -47.5, "color": "#0066CC"}, {"municipio": "Santa Rita do Passa Quatro", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 6, "lat": -21.7167, "lon": -47.5, "color": "#00A86B"}, {"municipio": "Santo Antonio do Pinhal", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -22.6333, "lon": -45.65, "color": "#0066CC"}, {"municipio": "Sao Luiz do Paraitinga", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -23.8333, "lon": -45.0, "color": "#0066CC"}, {"municipio": "S\u00e3o Jos\u00e9 do Rio Preto", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -20.8167, "lon": -49.3833, "color": "#0066CC"}, {"municipio": "S\u00e3o Jos\u00e9 do Rio Preto", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 6, "lat": -20.8167, "lon": -49.3833, "color": "#00A86B"}, {"municipio": "S\u00e3o Jo\u00e3o da Boa Vista", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -21.9667, "lon": -46.8333, "color": "#0066CC"}, {"municipio": "S\u00e3o Jo\u00e3o de Iracema", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -21.35, "lon": -49.1167, "color": "#FF6B35"}, {"municipio": "S\u00e3o Jo\u00e3o de Iracema", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 3, "lat": -21.35, "lon": -49.1167, "color": "#0066CC"}, {"municipio": "S\u00e3o Jo\u00e3o de Iracema", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 3, "lat": -21.35, "lon": -49.1167, "color": "#00A86B"}, {"municipio": "S\u00e3o Luis do Paratinga", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 2, "lat": -23.8333, "lon": -45.0, "color": "#FF6B35"}, {"municipio": "S\u00e3o Lu\u00eds do Piraitinga", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -23.8333, "lon": -45.0, "color": "#0066CC"}, {"municipio": "S\u00e3o Paulo", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 14, "lat": -23.5505, "lon": -46.6333, "color": "#FF6B35"}, {"municipio": "S\u00e3o Paulo", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 33, "lat": -23.5505, "lon": -46.6333, "color": "#0066CC"}, {"municipio": "S\u00e3o Paulo", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 31, "lat": -23.5505, "lon": -46.6333, "color": "#00A86B"}, {"municipio": "S\u00e3o Roque", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -23.5333, "lon": -47.1667, "color": "#0066CC"}, {"municipio": "S\u00e3o Sebasti\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 6, "lat": -23.7667, "lon": -45.4167, "color": "#0066CC"}, {"municipio": "S\u00e3o luis do Paratinga", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 26, "lat": -23.8333, "lon": -45.0, "color": "#FF6B35"}, {"municipio": "S\u00e3o sebasti\u00e3o", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -23.7667, "lon": -45.4167, "color": "#0066CC"}, {"municipio": "Taquaritinga", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -21.4167, "lon": -48.5167, "color": "#0066CC"}, {"municipio": "Taquaritinga", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -21.4167, "lon": -48.5167, "color": "#00A86B"}, {"municipio": "Teodoro Sampaio", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 1, "lat": -21.9167, "lon": -52.3333, "color": "#0066CC"}, {"municipio": "Turmalina", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 2, "lat": -20.3333, "lon": -46.3333, "color": "#FF6B35"}, {"municipio": "Turmalina", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 7, "lat": -20.3333, "lon": -46.3333, "color": "#0066CC"}, {"municipio": "Turmalina", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 4, "lat": -20.3333, "lon": -46.3333, "color": "#00A86B"}, {"municipio": "Ubatuba", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 28, "lat": -23.45, "lon": -45.0767, "color": "#FF6B35"}, {"municipio": "Ubatuba", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 48, "lat": -23.45, "lon": -45.0767, "color": "#0066CC"}, {"municipio": "Ubatuba", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 18, "lat": -23.45, "lon": -45.0767, "color": "#00A86B"}, {"municipio": "Uni\u00e3o Paulista", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 4, "lat": -21.5, "lon": -48.75, "color": "#0066CC"}, {"municipio": "Uni\u00e3o Paulista", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 1, "lat": -21.5, "lon": -48.75, "color": "#00A86B"}, {"municipio": "Vicentin\u00f3polis", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 1, "lat": -21.6, "lon": -48.9167, "color": "#FF6B35"}, {"municipio": "Vicentin\u00f3polis", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 4, "lat": -21.6, "lon": -48.9167, "color": "#0066CC"}, {"municipio": "Vista alegre do Alto", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 2, "lat": -21.3667, "lon": -48.65, "color": "#0066CC"}, {"municipio": "Votuporanga", "estado": "S\u00e3o Paulo", "tipo": "Coccoid", "freq": 3, "lat": -20.4167, "lon": -49.9833, "color": "#FF6B35"}, {"municipio": "Votuporanga", "estado": "S\u00e3o Paulo", "tipo": "Heterocytous", "freq": 6, "lat": -20.4167, "lon": -49.9833, "color": "#0066CC"}, {"municipio": "Votuporanga", "estado": "S\u00e3o Paulo", "tipo": "Non-heterocytous", "freq": 3, "lat": -20.4167, "lon": -49.9833, "color": "#00A86B"}];
+
+// Iniciar mapa
+const map = L.map('map').setView([-14, -51.9], 5);
+
+// Tiles OpenStreetMap
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+    zIndex: 1
+}).addTo(map);
+
+// Marker cluster group
+const mcg = L.markerClusterGroup({
+    maxClusterRadius: 80,
+    disableClusteringAtZoom: 13,
+    chunkedLoading: true
+});
+
+let marcadores = {};
+
+// Adicionar marcadores
+dados.forEach(m => {
+    const raio = Math.log(m.freq + 1) * 3.5 + 5;
+    
+    const circle = L.circleMarker([m.lat, m.lon], {
+        radius: raio,
+        fillColor: m.color,
+        color: 'white',
+        weight: 2.5,
+        opacity: 0.85,
+        fillOpacity: 0.7,
+        className: `tipo-${m.tipo}`
+    });
+    
+    circle.bindPopup(`
+        <div style="font-family: system-ui; font-size: 13px; min-width: 250px;">
+            <h3 style="margin: 0 0 10px 0; color: ${m.color}; font-weight: 600; font-size: 16px;">
+                🫧 ${m.municipio}
+            </h3>
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 8px;">
+                <div style="margin-bottom: 6px;"><b>Estado:</b> ${m.estado}</div>
+                <div style="margin-bottom: 6px;">
+                    <b style="color: ${m.color};">${m.tipo}</b>
+                </div>
+                <div style="margin-bottom: 6px;">
+                    <b style="color: ${m.color}; font-size: 16px;">${m.freq} ocorrências</b>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
+                    Coords: (${m.lat.toFixed(4)}, ${m.lon.toFixed(4)})
+                </div>
+            </div>
+        </div>
+    `);
+    
+    circle.bindTooltip(`${m.municipio}: ${m.freq}`, { permanent: false, direction: 'top' });
+    
+    mcg.addLayer(circle);
+    marcadores[m.municipio.toLowerCase()] = circle;
+});
+
+map.addLayer(mcg);
+
+// Filtros
+['filter-het', 'filter-coc', 'filter-non'].forEach(id => {
+    document.getElementById(id).addEventListener('change', (e) => {
+        const tipo = id.replace('filter-', '').charAt(0).toUpperCase() + 
+                    id.replace('filter-', '').slice(1);
+        const mapTipo = {
+            'Het': 'Heterocytous',
+            'Coc': 'Coccoid',
+            'Non': 'Non-heterocytous'
+        }[id.replace('filter-', '').toUpperCase()];
+        
+        document.querySelectorAll(`.tipo-${mapTipo}`).forEach(el => {
+            el.style.display = e.target.checked ? 'block' : 'none';
+        });
+    });
+});
+
+// Busca
+document.getElementById('search').addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    if (term.length > 0) {
+        Object.keys(marcadores).forEach(key => {
+            if (key.includes(term)) {
+                const layer = marcadores[key];
+                map.setView(layer.getLatLng(), 13);
+                layer.openPopup();
+            }
+        });
+    }
+});
+</script>
+</body>
+</html>
